@@ -13,9 +13,12 @@ let
  * Use Dash.js to playback DASH content inside of Video.js via a SourceHandler
  */
 class Html5DashJS {
-  constructor(source, tech) {
-    let options = tech.options_;
-    let player = videojs(options.playerId);
+  constructor(source, tech, options) {
+    // Get options from tech if not provided for backwards compatibility
+    options = options || tech.options_;
+
+    this.player = videojs(options.playerId);
+    this.player.dash = this.player.dash || {};
 
     this.tech_ = tech;
     this.el_ = tech.el();
@@ -38,13 +41,9 @@ class Html5DashJS {
     let manifestSource = source.src;
     this.keySystemOptions_ = Html5DashJS.buildDashJSProtData(source.keySystemOptions);
 
-    // Save the context after the first initialization for subsequent instances
-    Html5DashJS.context_ = Html5DashJS.context_ || {};
+    this.player.dash.mediaPlayer = dashjs.MediaPlayer().create();
 
-    // reuse MediaPlayer if it already exists
-    if (!this.mediaPlayer_) {
-      this.mediaPlayer_ = dashjs.MediaPlayer(Html5DashJS.context_).create();
-    }
+    this.mediaPlayer_ = this.player.dash.mediaPlayer;
 
     // Log MedaPlayer messages through video.js
     if (Html5DashJS.useVideoJSDebug) {
@@ -54,12 +53,20 @@ class Html5DashJS {
     }
 
     if (Html5DashJS.beforeInitialize) {
-      Html5DashJS.beforeInitialize(player, this.mediaPlayer_);
+      Html5DashJS.beforeInitialize(this.player, this.mediaPlayer_);
     }
 
     // Must run controller before these two lines or else there is no
     // element to bind to.
     this.mediaPlayer_.initialize();
+
+    // Apply any options that are set
+    if (options.dash && options.dash.limitBitrateByPortal) {
+      this.mediaPlayer_.setLimitBitrateByPortal(true);
+    } else {
+      this.mediaPlayer_.setLimitBitrateByPortal(false);
+    }
+
     this.mediaPlayer_.attachView(this.el_);
 
     // Dash.js autoplays by default, video.js will handle autoplay
@@ -104,6 +111,10 @@ class Html5DashJS {
     if (this.mediaPlayer_) {
       this.mediaPlayer_.reset();
     }
+
+    if (this.player.dash) {
+      delete this.player.dash;
+    }
   }
 }
 
@@ -121,8 +132,8 @@ videojs.DashSourceHandler = function() {
       }
     },
 
-    handleSource: function(source, tech) {
-      return new Html5DashJS(source, tech);
+    handleSource: function(source, tech, options) {
+      return new Html5DashJS(source, tech, options);
     },
 
     canPlayType: function(type) {

@@ -4,16 +4,16 @@
 
 A video.js source handler for supporting MPEG-DASH playback through a video.js player on browsers with support for Media Source Extensions.
 
+Lead Maintainer: Joe Forbes [forbesjo](https://github.com/forbesjo)
+
+Maintenance Status: Stable
+
 ## Getting Started
 
 Download [Dash.js](https://github.com/Dash-Industry-Forum/dash.js/releases) and [videojs-contrib-dash](https://github.com/videojs/videojs-contrib-dash/releases). Include them both in your web page along with video.js:
 
 ```html
-<video id=example-video width=600 height=300 class="video-js vjs-default-skin" controls>
-  <source
-     src="https://example.com/dash.mpd"
-     type="application/dash+xml">
-</video>
+<video id=example-video width=600 height=300 class="video-js vjs-default-skin" controls></video>
 <script src="video.js"></script>
 
 <!-- Dash.js -->
@@ -24,7 +24,15 @@ Download [Dash.js](https://github.com/Dash-Industry-Forum/dash.js/releases) and 
 
 <script>
 var player = videojs('example-video');
-player.play();
+
+player.ready(function() {
+  player.src({
+    src: 'https://example.com/dash.mpd',
+    type: 'application/dash+xml'
+  });
+
+  player.play();
+});
 </script>
 ```
 
@@ -65,6 +73,26 @@ videojs.Html5DashJS.updateSourceData = function(source) {
   }];
   return source;
 };
+```
+
+## Passing options to Dash.js
+
+It is possible to pass options to Dash.js during initialiation of video.js. The following options are currently supported:
+
+* `limitBitrateByPortal` (defaults to `false`): if set to `true`, Dash.js will not request video tracks which are bigger than the video element.
+
+To set these options, pass them in the `html5.dash` object of video.js during initialization.
+
+For example:
+
+```javascript
+var player = videojs('example-video', {
+  html5: {
+    dash: {
+      limitBitrateByPortal: true
+    }
+  }
+});
 ```
 
 ## Before Initialize Hook
